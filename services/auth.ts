@@ -109,11 +109,17 @@ export const authService = {
     });
   },
 
-  async checkId(loginId: string): Promise<boolean> {
-    const result = await request<{ isAvailable: boolean }>(
-      `/api/auth/check-id?loginId=${encodeURIComponent(loginId)}`
-    );
-    return result.isAvailable;
+  async checkId(loginId: string): Promise<{ isAvailable: boolean; message: string }> {
+    try {
+      await request<{ isAvailable: boolean }>(
+        `/api/auth/check-id?loginId=${encodeURIComponent(loginId)}`
+      );
+      return { isAvailable: true, message: '사용 가능한 아이디입니다.' };
+    } catch (e) {
+      // 400 INVALID_ID_FORMAT / 409 DUPLICATE_ID
+      const message = e instanceof Error ? e.message : '확인에 실패했습니다.';
+      return { isAvailable: false, message };
+    }
   },
 
   async logout(): Promise<void> {

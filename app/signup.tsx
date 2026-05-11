@@ -26,6 +26,19 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [checkIdState, setCheckIdState] = useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle');
+  const [checkIdMessage, setCheckIdMessage] = useState('');
+
+  const handleCheckId = async () => {
+    if (!email.trim()) {
+      Alert.alert('알림', '이메일을 먼저 입력해주세요.');
+      return;
+    }
+    setCheckIdState('checking');
+    const result = await authService.checkId(email);
+    setCheckIdState(result.isAvailable ? 'available' : 'unavailable');
+    setCheckIdMessage(result.message);
+  };
 
   const validatePassword = (pw: string) => {
     if (!pw) { setPasswordError(''); return; }
@@ -39,6 +52,10 @@ export default function SignupScreen() {
   const handleSignup = async () => {
     if (!email.trim() || !password.trim() || !name.trim() || !nickname.trim()) {
       Alert.alert('알림', '모든 항목을 입력해주세요.');
+      return;
+    }
+    if (checkIdState !== 'available') {
+      Alert.alert('알림', '이메일 중복 확인을 완료해주세요.');
       return;
     }
     if (!PASSWORD_REGEX.test(password)) {
@@ -76,17 +93,40 @@ export default function SignupScreen() {
           <Text style={styles.title}>회원가입</Text>
 
           <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="이메일"
-              placeholderTextColor="#BBBBBB"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="next"
-            />
+            <View>
+              <View style={styles.checkIdRow}>
+                <TextInput
+                  style={styles.checkIdInput}
+                  placeholder="이메일"
+                  placeholderTextColor="#BBBBBB"
+                  value={email}
+                  onChangeText={(v) => {
+                    setEmail(v);
+                    setCheckIdState('idle');
+                    setCheckIdMessage('');
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                />
+                <TouchableOpacity
+                  style={[styles.checkIdBtn, checkIdState === 'checking' && styles.btnDisabled]}
+                  onPress={handleCheckId}
+                  disabled={checkIdState === 'checking'}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.checkIdBtnText}>
+                    {checkIdState === 'checking' ? '확인 중' : '중복 확인'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {checkIdMessage ? (
+                <Text style={checkIdState === 'available' ? styles.successText : styles.errorText}>
+                  {checkIdMessage}
+                </Text>
+              ) : null}
+            </View>
 
             <View>
               <View style={[styles.passwordRow, passwordError ? styles.inputError : null]}>
@@ -210,6 +250,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888888',
     fontWeight: '500',
+  },
+  checkIdRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  checkIdInput: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 16,
+    color: '#1A1A1A',
+  },
+  checkIdBtn: {
+    backgroundColor: PRIMARY_GREEN,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkIdBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  successText: {
+    marginTop: 4,
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#3D6836',
   },
   errorText: {
     marginTop: 4,
