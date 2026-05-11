@@ -1,9 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '@/services/auth';
+import { shortformService } from '@/services/shortform';
+
+function formatDuration(totalSeconds: number) {
+  const safeSeconds = Math.max(0, totalSeconds);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+
+  return {
+    hours: String(hours).padStart(2, '0'),
+    minutes: String(minutes).padStart(2, '0'),
+    seconds: String(seconds).padStart(2, '0'),
+  };
+}
 
 function TimeBox({
   label,
@@ -32,6 +47,39 @@ function TimeBox({
 }
 
 export default function HomeScreen() {
+  const [todayUsageSeconds, setTodayUsageSeconds] = useState(0);
+  const [dailyLimitSeconds, setDailyLimitSeconds] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const loadShortformSummary = async () => {
+        try {
+          const [usage, limit] = await Promise.all([
+            shortformService.getTodayUsage(),
+            shortformService.getLimit(),
+          ]);
+
+          if (isActive) {
+            setTodayUsageSeconds(usage.todayUsageSeconds);
+            setDailyLimitSeconds(limit.dailyLimitSeconds);
+          }
+        } catch (error) {
+          if (isActive) {
+            console.warn('Failed to load shortform summary:', error);
+          }
+        }
+      };
+
+      loadShortformSummary();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
+
   const handleLogout = async () => {
     try {
       await authService.logout();
@@ -41,6 +89,9 @@ export default function HomeScreen() {
       Alert.alert('로그아웃 실패', msg);
     }
   };
+
+  const dailyLimit = formatDuration(dailyLimitSeconds);
+  const todayUsage = formatDuration(todayUsageSeconds);
 
   return (
     <View style={styles.screen}>
@@ -69,8 +120,18 @@ export default function HomeScreen() {
         <Text style={styles.nickname}>닉네임</Text>
         <View style={styles.divider} />
 
-        <TimeBox label="제한 Shorts 이용 시간" hours="03" minutes="00" seconds="00" />
-        <TimeBox label="오늘의 Shorts 이용 시간" hours="23" minutes="59" seconds="59" />
+        <TimeBox
+          label="제한 Shorts 이용 시간"
+          hours={dailyLimit.hours}
+          minutes={dailyLimit.minutes}
+          seconds={dailyLimit.seconds}
+        />
+        <TimeBox
+          label="오늘의 Shorts 이용 시간"
+          hours={todayUsage.hours}
+          minutes={todayUsage.minutes}
+          seconds={todayUsage.seconds}
+        />
 
         <Text style={styles.algorithmLabel}>현재 내 Shorts 알고리즘</Text>
       </View>

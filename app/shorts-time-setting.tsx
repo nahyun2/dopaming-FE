@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,12 @@ import {
   StyleSheet,
   Modal,
   Image,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { shortformService } from '@/services/shortform';
 
 const PRIMARY_GREEN = '#3D6836';
 const TIME_RED = '#8B1A1A';
@@ -19,9 +22,56 @@ export default function ShortsTimeSettingScreen() {
   const [minutes, setMinutes] = useState('00');
   const [seconds, setSeconds] = useState('00');
   const [showModal, setShowModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    setShowModal(true);
+  useEffect(() => {
+    let isActive = true;
+
+    const loadLimit = async () => {
+      try {
+        const limit = await shortformService.getLimit();
+        const safeSeconds = Math.max(0, limit.dailyLimitSeconds);
+        const nextHours = Math.floor(safeSeconds / 3600);
+        const nextMinutes = Math.floor((safeSeconds % 3600) / 60);
+        const nextSeconds = safeSeconds % 60;
+
+        if (isActive) {
+          setHours(String(nextHours).padStart(2, '0'));
+          setMinutes(String(nextMinutes).padStart(2, '0'));
+          setSeconds(String(nextSeconds).padStart(2, '0'));
+        }
+      } catch (error) {
+        if (isActive) {
+          console.warn('Failed to load shortform limit:', error);
+        }
+      }
+    };
+
+    loadLimit();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const handleSave = async () => {
+    if (isSaving) return;
+
+    const dailyLimitSeconds =
+      Number(hours || 0) * 3600 + Number(minutes || 0) * 60 + Number(seconds || 0);
+
+    try {
+      setIsSaving(true);
+      await shortformService.updateLimit({ dailyLimitSeconds });
+      setShowModal(true);
+    } catch (error) {
+      Alert.alert(
+        '저장 실패',
+        error instanceof Error ? error.message : '하루 숏폼 제한 시간 변경에 실패했습니다.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleGoToMain = () => {
@@ -78,8 +128,12 @@ export default function ShortsTimeSettingScreen() {
 
       <View style={styles.footer}>
         <View style={styles.divider} />
-        <TouchableOpacity onPress={handleSave} style={styles.saveBtn} activeOpacity={0.7}>
-          <Text style={styles.saveBtnText}>저장하기</Text>
+        <TouchableOpacity
+          disabled={isSaving}
+          onPress={handleSave}
+          style={styles.saveBtn}
+          activeOpacity={0.7}>
+          <Text style={styles.saveBtnText}>{isSaving ? '저장 중...' : '저장하기'}</Text>
         </TouchableOpacity>
         <View style={styles.divider} />
       </View>
