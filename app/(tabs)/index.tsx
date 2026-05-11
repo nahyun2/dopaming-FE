@@ -90,8 +90,12 @@ export default function HomeScreen() {
     }
   };
 
+  const remainingSeconds = Math.max(0, dailyLimitSeconds - todayUsageSeconds);
+  const isExceeded = todayUsageSeconds > dailyLimitSeconds;
+
   const dailyLimit = formatDuration(dailyLimitSeconds);
   const todayUsage = formatDuration(todayUsageSeconds);
+  const remaining = formatDuration(remainingSeconds);
 
   return (
     <View style={styles.screen}>
@@ -132,6 +136,13 @@ export default function HomeScreen() {
           minutes={todayUsage.minutes}
           seconds={todayUsage.seconds}
         />
+        <TimeBox
+          label="남은 제한 Shorts 이용 시간"
+          hours={remaining.hours}
+          minutes={remaining.minutes}
+          seconds={remaining.seconds}
+        />
+        {isExceeded && <Text style={styles.exceededText}>초과되었습니다!</Text>}
 
         <Text style={styles.algorithmLabel}>현재 내 Shorts 알고리즘</Text>
       </View>
@@ -241,6 +252,13 @@ const styles = StyleSheet.create({
     fontSize: 31,
     fontWeight: '900',
     lineHeight: 37,
+  },
+  exceededText: {
+    color: '#BA4449',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 4,
+    marginBottom: 6,
   },
   algorithmLabel: {
     color: '#666666',
