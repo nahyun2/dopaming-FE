@@ -54,22 +54,25 @@ export default function HomeScreen() {
     useCallback(() => {
       let isActive = true;
 
-      const loadTodayUsage = async () => {
+      const loadShortformSummary = async () => {
         try {
-          const usage = await shortformService.getTodayUsage();
+          const [usage, limit] = await Promise.all([
+            shortformService.getTodayUsage(),
+            shortformService.getLimit(),
+          ]);
 
           if (isActive) {
             setTodayUsageSeconds(usage.todayUsageSeconds);
-            setDailyLimitSeconds(usage.dailyLimitSeconds);
+            setDailyLimitSeconds(limit.dailyLimitSeconds);
           }
         } catch (error) {
           if (isActive) {
-            console.warn('Failed to load today shortform usage:', error);
+            console.warn('Failed to load shortform summary:', error);
           }
         }
       };
 
-      loadTodayUsage();
+      loadShortformSummary();
 
       return () => {
         isActive = false;

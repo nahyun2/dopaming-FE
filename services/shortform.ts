@@ -27,6 +27,14 @@ export interface TodayShortformUsageResult {
   status: ShortformUsageStatus;
 }
 
+export interface ShortformLimitResult {
+  dailyLimitSeconds: number;
+}
+
+export interface ShortformLimitRequest {
+  dailyLimitSeconds: number;
+}
+
 export const shortformService = {
   recordUsage(data: ShortformUsageRequest): Promise<ShortformUsageResult> {
     return request<ShortformUsageResult>('/api/shortform/usage', {
@@ -37,5 +45,16 @@ export const shortformService = {
 
   getTodayUsage(): Promise<TodayShortformUsageResult> {
     return request<TodayShortformUsageResult>('/api/shortform/usage/today');
+  },
+
+  getLimit(): Promise<ShortformLimitResult> {
+    return request<ShortformLimitResult>('/api/shortform/limit');
+  },
+
+  updateLimit(data: ShortformLimitRequest): Promise<ShortformLimitResult> {
+    return request<ShortformLimitResult>('/api/shortform/limit', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   },
 };
