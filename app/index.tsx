@@ -8,7 +8,7 @@ const PRIMARY_GREEN = '#3D6836';
 export default function SplashScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace('/(tabs)'); // TODO: 테스트용 - 나중에 '/login'으로 변경
+      router.replace('/login');
     }, 2000);
     return () => clearTimeout(timer);
   }, []);

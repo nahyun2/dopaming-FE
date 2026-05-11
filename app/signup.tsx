@@ -19,22 +19,24 @@ const PRIMARY_GREEN = '#3D6836';
 export default function SignupScreen() {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignup = async () => {
-    if (!userId.trim() || !password.trim() || !nickname.trim()) {
+    if (!userId.trim() || !password.trim() || !name.trim() || !nickname.trim()) {
       Alert.alert('알림', '모든 항목을 입력해주세요.');
       return;
     }
 
     setIsLoading(true);
     try {
-      await authService.signup({ userId, password, nickname });
+      await authService.signup({ loginId: userId, password, name, nickname });
       router.replace('/signup-complete');
-    } catch {
-      Alert.alert('회원가입 실패', '이미 사용 중인 아이디이거나 오류가 발생했습니다.');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '오류가 발생했습니다.';
+      Alert.alert('회원가입 실패', msg);
     } finally {
       setIsLoading(false);
     }
@@ -87,6 +89,15 @@ export default function SignupScreen() {
                 <Text style={styles.showBtnText}>Show</Text>
               </TouchableOpacity>
             </View>
+
+            <TextInput
+              style={styles.input}
+              placeholder="이름"
+              placeholderTextColor="#BBBBBB"
+              value={name}
+              onChangeText={setName}
+              returnKeyType="next"
+            />
 
             <TextInput
               style={styles.input}
