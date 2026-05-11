@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { tokenStore } from './token';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
@@ -28,8 +29,37 @@ interface ApiResponse<T> {
   data: T;
 }
 
+// ── 토큰 재발급 (인터셉터 내부용, request()를 거치지 않음) ───────────
+async function refreshTokens(): Promise<void> {
+  const refreshToken = tokenStore.getRefresh();
+  if (!refreshToken) throw new Error('리프레시 토큰이 없습니다.');
+
+  const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  const text = await response.text();
+  const json: ApiResponse<AuthTokens> = text ? JSON.parse(text) : undefined;
+
+  if (!response.ok) {
+    // 400 REFRESH_TOKEN_REQUIRED / 401 REFRESH_TOKEN_EXPIRED
+    tokenStore.clear();
+    router.replace('/login');
+    throw new Error(json?.message ?? '인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+  }
+
+  const tokens = json.data;
+  tokenStore.set(tokens.accessToken, tokens.refreshToken, tokens.nickname);
+}
+
 // ── 공통 fetch 헬퍼 ────────────────────────────────────────────────
-export async function request<T>(path: string, options?: RequestInit): Promise<T> {
+export async function request<T>(
+  path: string,
+  options?: RequestInit,
+  isRetry = false,
+): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
@@ -44,6 +74,12 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
     ...options,
     headers,
   });
+
+  // 액세스 토큰 만료 → 재발급 후 한 번만 재시도
+  if (response.status === 401 && !isRetry && tokenStore.getRefresh()) {
+    await refreshTokens();
+    return request<T>(path, options, true);
+  }
 
   const text = await response.text();
   const json: ApiResponse<T> = text ? JSON.parse(text) : undefined;
@@ -85,14 +121,6 @@ export const authService = {
     tokenStore.clear();
   },
 
-  async refresh(): Promise<AuthTokens> {
-    const refreshToken = tokenStore.getRefresh();
-    if (!refreshToken) throw new Error('No refresh token');
-    const tokens = await request<AuthTokens>('/api/auth/refresh', {
-      method: 'POST',
-      body: JSON.stringify({ refreshToken }),
-    });
-    tokenStore.set(tokens.accessToken, tokens.refreshToken, tokens.nickname);
-    return tokens;
-  },
+  // 수동 재발급이 필요한 경우 외부에서 직접 호출 가능
+  refresh: refreshTokens,
 };
