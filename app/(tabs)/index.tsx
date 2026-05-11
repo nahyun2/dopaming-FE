@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { authService } from '@/services/auth';
 
 function TimeBox({
   label,
@@ -31,6 +32,16 @@ function TimeBox({
 }
 
 export default function HomeScreen() {
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      router.replace('/login');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '로그아웃에 실패했습니다.';
+      Alert.alert('로그아웃 실패', msg);
+    }
+  };
+
   return (
     <View style={styles.screen}>
       <StatusBar style="light" backgroundColor={styles.header.backgroundColor} />
@@ -43,7 +54,7 @@ export default function HomeScreen() {
               style={styles.iconButton}>
               <Ionicons name="settings-outline" size={27} color="#FFFFFF" />
             </Pressable>
-            <Pressable hitSlop={10}>
+            <Pressable hitSlop={10} onPress={handleLogout}>
               <Text style={styles.logoutText}>로그아웃</Text>
             </Pressable>
           </View>
