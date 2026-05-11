@@ -29,7 +29,7 @@ interface ApiResponse<T> {
 }
 
 // ── 공통 fetch 헬퍼 ────────────────────────────────────────────────
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+export async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
