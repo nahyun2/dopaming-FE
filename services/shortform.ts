@@ -20,11 +20,22 @@ export interface ShortformUsageResult {
   status: ShortformUsageStatus;
 }
 
+export interface TodayShortformUsageResult {
+  todayUsageSeconds: number;
+  dailyLimitSeconds: number;
+  remainingSeconds: number;
+  status: ShortformUsageStatus;
+}
+
 export const shortformService = {
   recordUsage(data: ShortformUsageRequest): Promise<ShortformUsageResult> {
     return request<ShortformUsageResult>('/api/shortform/usage', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  getTodayUsage(): Promise<TodayShortformUsageResult> {
+    return request<TodayShortformUsageResult>('/api/shortform/usage/today');
   },
 };
