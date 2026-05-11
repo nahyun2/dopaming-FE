@@ -24,7 +24,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!userId.trim() || !password.trim()) {
-      Alert.alert('알림', '아이디와 비밀번호를 입력해주세요.');
+      Alert.alert('알림', '아이디와 비밀번호는 필수 입력 항목입니다.');
       return;
     }
 
@@ -61,10 +61,11 @@ export default function LoginScreen() {
           <View style={styles.form}>
             <TextInput
               style={styles.input}
-              placeholder="아이디"
+              placeholder="이메일"
               placeholderTextColor="#BBBBBB"
               value={userId}
               onChangeText={setUserId}
+              keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
@@ -86,7 +87,7 @@ export default function LoginScreen() {
                 onPress={() => setShowPassword((v) => !v)}
                 style={styles.showBtn}
               >
-                <Text style={styles.showBtnText}>Show</Text>
+                <Text style={styles.showBtnText}>{showPassword ? '숨기기' : '보기'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -97,7 +98,7 @@ export default function LoginScreen() {
             disabled={isLoading}
             activeOpacity={0.8}
           >
-            <Text style={styles.loginBtnText}>로그인</Text>
+            <Text style={styles.loginBtnText}>{isLoading ? '처리 중...' : '로그인'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
