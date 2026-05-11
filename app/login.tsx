@@ -22,21 +22,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!userId.trim() || !password.trim()) {
-      Alert.alert('알림', '아이디와 비밀번호를 입력해주세요.');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await authService.login({ userId, password });
-      router.replace('/(tabs)');
-    } catch {
-      Alert.alert('로그인 실패', '아이디 또는 비밀번호를 확인해주세요.');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleLogin = () => {
+    router.replace('/(tabs)'); // TODO: 테스트용 - 나중에 실제 로그인 로직으로 변경
   };
 
   return (

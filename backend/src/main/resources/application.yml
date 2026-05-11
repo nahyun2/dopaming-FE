@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: backend
+
+  # ???? ??
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}   # ?? ?? ???? (application-local.yml ??)
+
+  docker:
+    compose:
+      enabled: false
+
+  # JPA ??
+  jpa:
+    hibernate:
+      ddl-auto: update            # ?? ? ??
+    properties:
+      hibernate:
+        format_sql: true          # ??? DB ?? ?? ? ???
+    open-in-view: false
+
+# ?????? ?? ??
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+# Spring Actuator ??
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health     # health? ?? ?? (?????)
+  endpoint:
+    health:
+      show-details: always
+
+# Spring Docs (Swagger UI) ??
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+    try-it-out-enabled: true
+    persist-authorization: true
+  show-actuator: true
+
