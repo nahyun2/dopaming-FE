@@ -16,23 +16,39 @@ import { authService } from '@/services/auth';
 
 const PRIMARY_GREEN = '#3D6836';
 
+const PASSWORD_REGEX = /^(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
 export default function SignupScreen() {
-  const [userId, setUserId] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
+  const validatePassword = (pw: string) => {
+    if (!pw) { setPasswordError(''); return; }
+    if (!PASSWORD_REGEX.test(pw)) {
+      setPasswordError('특수문자를 포함한 8자 이상이어야 합니다.');
+    } else {
+      setPasswordError('');
+    }
+  };
 
   const handleSignup = async () => {
-    if (!userId.trim() || !password.trim() || !name.trim() || !nickname.trim()) {
+    if (!email.trim() || !password.trim() || !name.trim() || !nickname.trim()) {
       Alert.alert('알림', '모든 항목을 입력해주세요.');
+      return;
+    }
+    if (!PASSWORD_REGEX.test(password)) {
+      Alert.alert('알림', '비밀번호는 특수문자를 포함한 8자 이상이어야 합니다.');
       return;
     }
 
     setIsLoading(true);
     try {
-      await authService.signup({ loginId: userId, password, name, nickname });
+      await authService.signup({ loginId: email, password, name, nickname });
       router.replace('/signup-complete');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '오류가 발생했습니다.';
@@ -62,32 +78,38 @@ export default function SignupScreen() {
           <View style={styles.form}>
             <TextInput
               style={styles.input}
-              placeholder="아이디"
+              placeholder="이메일"
               placeholderTextColor="#BBBBBB"
-              value={userId}
-              onChangeText={setUserId}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
             />
 
-            <View style={styles.passwordRow}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="비밀번호"
-                placeholderTextColor="#BBBBBB"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                returnKeyType="next"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword((v) => !v)}
-                style={styles.showBtn}
-              >
-                <Text style={styles.showBtnText}>Show</Text>
-              </TouchableOpacity>
+            <View>
+              <View style={[styles.passwordRow, passwordError ? styles.inputError : null]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="비밀번호 (특수문자 포함 8자 이상)"
+                  placeholderTextColor="#BBBBBB"
+                  value={password}
+                  onChangeText={(v) => { setPassword(v); validatePassword(v); }}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  returnKeyType="next"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword((v) => !v)}
+                  style={styles.showBtn}
+                >
+                  <Text style={styles.showBtnText}>{showPassword ? '숨기기' : '보기'}</Text>
+                </TouchableOpacity>
+              </View>
+              {passwordError ? (
+                <Text style={styles.errorText}>{passwordError}</Text>
+              ) : null}
             </View>
 
             <TextInput
@@ -116,7 +138,9 @@ export default function SignupScreen() {
             disabled={isLoading}
             activeOpacity={0.8}
           >
-            <Text style={styles.signupBtnText}>회원가입</Text>
+            <Text style={styles.signupBtnText}>
+              {isLoading ? '처리 중...' : '회원가입'}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -167,6 +191,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
   },
+  inputError: {
+    borderWidth: 1,
+    borderColor: '#E53935',
+  },
   passwordInput: {
     flex: 1,
     paddingHorizontal: 16,
@@ -182,6 +210,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888888',
     fontWeight: '500',
+  },
+  errorText: {
+    marginTop: 4,
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#E53935',
   },
   signupBtn: {
     backgroundColor: PRIMARY_GREEN,
