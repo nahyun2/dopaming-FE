@@ -1,7 +1,9 @@
 import { router } from 'expo-router';
 import { tokenStore } from './token';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
+const API_BASE_URL = (
+  process.env.EXPO_PUBLIC_API_URL ?? 'https://proponent-ocean-worried.ngrok-free.dev'
+).replace(/\/$/, '');
 
 // ── 요청/응답 타입 (백엔드 DTO와 일치) ──────────────────────────────
 export interface LoginRequest {
