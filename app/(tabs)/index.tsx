@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 function TimeBox({
@@ -51,7 +51,10 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.content}>
-        <View style={styles.avatar} />
+        <Image
+          source={require('@/assets/images/default-profile-avatar.png')}
+          style={styles.avatar}
+        />
         <Text style={styles.nickname}>닉네임</Text>
         <View style={styles.divider} />
 
@@ -107,7 +110,6 @@ const styles = StyleSheet.create({
     width: 165,
     height: 165,
     borderRadius: 82.5,
-    backgroundColor: '#B7B7B7',
     borderWidth: 4,
     borderColor: '#FFFFFF',
     shadowColor: '#000000',
@@ -115,6 +117,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.14,
     shadowRadius: 22,
     elevation: 10,
+    resizeMode: 'cover',
   },
   nickname: {
     marginTop: 1,

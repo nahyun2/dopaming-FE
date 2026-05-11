@@ -21,7 +21,13 @@ export default function ProfileScreen() {
 
       <View style={styles.content}>
         <Pressable style={styles.avatar}>
-          <Ionicons name="pencil-outline" size={44} color="#FFFFFF" />
+          <Image
+            source={require('@/assets/images/default-profile-avatar.png')}
+            style={styles.avatarImage}
+          />
+          <View style={styles.avatarEditBadge}>
+            <Ionicons name="pencil-outline" size={20} color="#FFFFFF" />
+          </View>
         </Pressable>
 
         <View style={styles.nicknameRow}>
@@ -120,12 +126,28 @@ const styles = StyleSheet.create({
     borderRadius: 82.5,
     borderWidth: 4,
     borderColor: '#FFFFFF',
-    backgroundColor: '#B7B7B7',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 15 },
     shadowOpacity: 0.14,
     shadowRadius: 22,
     elevation: 10,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 82.5,
+    resizeMode: 'cover',
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    right: 9,
+    bottom: 9,
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 17,
+    backgroundColor: '#3D772D',
   },
   nicknameRow: {
     height: 58,
