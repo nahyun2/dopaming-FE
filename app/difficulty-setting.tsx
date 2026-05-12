@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ProblemDifficulty, settingsService } from '@/services/settings';
 
 const PRIMARY_GREEN = '#3D772D';
+const CUSTOM_FREQUENCY = '시간 직접선택하기';
 
-const difficultyOptions = ['쉬움', '보통', '어려움', '끄기'];
-const frequencyOptions = ['1분', '5분', '10분', '직접 설정 -      분'];
+const difficultyOptions: ProblemDifficulty[] = ['쉬움', '보통', '어려움', '끄기'];
+const frequencyOptions = ['1분', '5분', '10분', CUSTOM_FREQUENCY];
 
 function RadioRow({
   label,
@@ -30,8 +32,61 @@ function RadioRow({
 }
 
 export default function DifficultySettingScreen() {
-  const [difficulty, setDifficulty] = useState('보통');
+  const [difficulty, setDifficulty] = useState<ProblemDifficulty>('보통');
   const [frequency, setFrequency] = useState('5분');
+  const [customMinutes, setCustomMinutes] = useState('5');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadSettings = async () => {
+      const settings = await settingsService.getSettings();
+
+      if (!isActive) return;
+
+      const { difficultySettings } = settings;
+      setDifficulty(difficultySettings.difficulty);
+      setCustomMinutes(String(difficultySettings.frequencyMinutes));
+      setFrequency(
+        difficultySettings.isCustomFrequency
+          ? CUSTOM_FREQUENCY
+          : `${difficultySettings.frequencyMinutes}분`
+      );
+    };
+
+    loadSettings();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const handleSave = async () => {
+    if (isSaving) return;
+
+    const minutes =
+      frequency === CUSTOM_FREQUENCY
+        ? Number(customMinutes)
+        : Number(frequency.replace(/[^0-9]/g, ''));
+
+    if (!Number.isFinite(minutes) || minutes < 1) {
+      Alert.alert('저장 실패', '시간은 1분 이상으로 입력해주세요.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await settingsService.updateDifficultySettings({
+        difficulty,
+        frequencyMinutes: Math.floor(minutes),
+        isCustomFrequency: frequency === CUSTOM_FREQUENCY,
+      });
+      Alert.alert('저장되었습니다', '문제 난이도 설정이 저장되었습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -67,12 +122,27 @@ export default function DifficultySettingScreen() {
             onPress={() => setFrequency(option)}
           />
         ))}
+        {frequency === CUSTOM_FREQUENCY ? (
+          <View style={styles.customTimeRow}>
+            <TextInput
+              value={customMinutes}
+              onChangeText={(value) => setCustomMinutes(value.replace(/[^0-9]/g, '').slice(0, 3))}
+              keyboardType="number-pad"
+              maxLength={3}
+              placeholder="분"
+              placeholderTextColor="#BDBDBD"
+              selectTextOnFocus
+              style={styles.customTimeInput}
+            />
+            <Text style={styles.customTimeUnit}>분</Text>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.footer}>
         <View style={styles.divider} />
-        <Pressable style={styles.saveButton}>
-          <Text style={styles.saveText}>저장하기</Text>
+        <Pressable disabled={isSaving} onPress={handleSave} style={styles.saveButton}>
+          <Text style={styles.saveText}>{isSaving ? '저장 중...' : '저장하기'}</Text>
         </Pressable>
         <View style={styles.divider} />
       </View>
@@ -134,6 +204,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 19,
+  },
+  customTimeRow: {
+    height: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#D8D8D8',
+    columnGap: 8,
+  },
+  customTimeInput: {
+    width: 76,
+    height: 36,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#D8D8D8',
+    borderRadius: 6,
+    color: '#666666',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  customTimeUnit: {
+    color: '#666666',
+    fontSize: 14,
+    fontWeight: '500',
   },
   radioOuter: {
     width: 14,

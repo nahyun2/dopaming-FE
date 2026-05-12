@@ -1,12 +1,51 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { settingsService } from '@/services/settings';
 
 export default function ProfileScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [nickname, setNickname] = useState('닉네임');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadProfile = async () => {
+      const settings = await settingsService.getSettings();
+
+      if (isActive) {
+        setNickname(settings.nickname);
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const handleSave = async () => {
+    const nextNickname = nickname.trim();
+
+    if (!nextNickname) {
+      Alert.alert('저장 실패', '프로필 이름을 입력해주세요.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const settings = await settingsService.updateNickname(nextNickname);
+      setNickname(settings.nickname);
+      Alert.alert('저장되었습니다', '프로필 이름이 저장되었습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -32,7 +71,8 @@ export default function ProfileScreen() {
 
         <View style={styles.nicknameRow}>
           <TextInput
-            defaultValue="닉네임"
+            value={nickname}
+            onChangeText={setNickname}
             maxLength={12}
             placeholder="닉네임"
             placeholderTextColor="#000000"
@@ -41,6 +81,10 @@ export default function ProfileScreen() {
           <Ionicons name="pencil-outline" size={30} color="#B7B7B7" />
         </View>
 
+        <View style={styles.divider} />
+        <Pressable disabled={isSaving} onPress={handleSave} style={styles.saveButton}>
+          <Text style={styles.saveText}>{isSaving ? '저장 중...' : '저장하기'}</Text>
+        </Pressable>
         <View style={styles.divider} />
       </View>
 
@@ -169,6 +213,17 @@ const styles = StyleSheet.create({
     width: '100%',
     height: StyleSheet.hairlineWidth,
     backgroundColor: '#9D9D9D',
+  },
+  saveButton: {
+    width: '100%',
+    height: 48,
+    justifyContent: 'center',
+  },
+  saveText: {
+    color: '#BDBDBD',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 19,
   },
   deleteButton: {
     position: 'absolute',

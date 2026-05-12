@@ -6,6 +6,7 @@ import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { authService } from '@/services/auth';
+import { settingsService } from '@/services/settings';
 import { shortformService } from '@/services/shortform';
 
 function formatDuration(totalSeconds: number) {
@@ -55,6 +56,7 @@ function TimeBox({
 export default function HomeScreen() {
   const [todayUsageSeconds, setTodayUsageSeconds] = useState(0);
   const [dailyLimitSeconds, setDailyLimitSeconds] = useState(0);
+  const [nickname, setNickname] = useState('닉네임');
 
   useFocusEffect(
     useCallback(() => {
@@ -62,6 +64,11 @@ export default function HomeScreen() {
 
       const loadShortformSummary = async () => {
         try {
+          const settings = await settingsService.getSettings();
+          if (isActive) {
+            setNickname(settings.nickname);
+          }
+
           const [usage, limit] = await Promise.all([
             shortformService.getTodayUsage(),
             shortformService.getLimit(),
@@ -131,7 +138,7 @@ export default function HomeScreen() {
           />
         </View>
 
-        <Text style={styles.nickname}>닉네임</Text>
+        <Text style={styles.nickname}>{nickname}</Text>
         <View style={styles.divider} />
 
         <TimeBox

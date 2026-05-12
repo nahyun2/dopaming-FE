@@ -8,6 +8,9 @@ export const tokenStore = {
     _refreshToken = refresh;
     _nickname = nickname ?? null;
   },
+  setNickname(nickname: string) {
+    _nickname = nickname;
+  },
   getAccess: () => _accessToken,
   getRefresh: () => _refreshToken,
   getNickname: () => _nickname,
