@@ -4,6 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { authService } from '@/services/auth';
 import { shortformService } from '@/services/shortform';
 
@@ -25,22 +26,27 @@ function TimeBox({
   hours,
   minutes,
   seconds,
+  footer,
 }: {
   label: string;
   hours: string;
   minutes: string;
   seconds: string;
+  footer?: string;
 }) {
   return (
     <View style={styles.timeSection}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.timerCard}>
-        <Text style={styles.timeNumber}>{hours}</Text>
-        <Text style={styles.timeUnit}>시간</Text>
-        <Text style={styles.timeNumber}>{minutes}</Text>
-        <Text style={styles.timeUnit}>분</Text>
-        <Text style={styles.timeNumber}>{seconds}</Text>
-        <Text style={styles.timeUnit}>초</Text>
+      <View style={[styles.timerCard, footer && styles.timerCardWithFooter]}>
+        <View style={styles.timerRow}>
+          <Text style={styles.timeNumber}>{hours}</Text>
+          <Text style={styles.timeUnit}>시간</Text>
+          <Text style={styles.timeNumber}>{minutes}</Text>
+          <Text style={styles.timeUnit}>분</Text>
+          <Text style={styles.timeNumber}>{seconds}</Text>
+          <Text style={styles.timeUnit}>초</Text>
+        </View>
+        {footer && <Text style={styles.cardFooter}>{footer}</Text>}
       </View>
     </View>
   );
@@ -100,6 +106,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" backgroundColor={styles.header.backgroundColor} />
+
       <View style={styles.header}>
         <SafeAreaView edges={['top']} style={styles.safeHeader}>
           <View style={styles.topBar}>
@@ -107,7 +114,7 @@ export default function HomeScreen() {
               hitSlop={10}
               onPress={() => router.push('/settings')}
               style={styles.iconButton}>
-              <Ionicons name="settings-outline" size={27} color="#FFFFFF" />
+              <Ionicons name="settings-outline" size={26} color="#FFFFFF" />
             </Pressable>
             <Pressable hitSlop={10} onPress={handleLogout}>
               <Text style={styles.logoutText}>로그아웃</Text>
@@ -117,10 +124,13 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.content}>
-        <Image
-          source={require('@/assets/images/default-profile-avatar.png')}
-          style={styles.avatar}
-        />
+        <View style={styles.avatarFrame}>
+          <Image
+            source={require('@/assets/images/default-profile-avatar.png')}
+            style={styles.avatar}
+          />
+        </View>
+
         <Text style={styles.nickname}>닉네임</Text>
         <View style={styles.divider} />
 
@@ -141,10 +151,8 @@ export default function HomeScreen() {
           hours={remaining.hours}
           minutes={remaining.minutes}
           seconds={remaining.seconds}
+          footer={isExceeded ? '초과되었습니다!' : undefined}
         />
-        {isExceeded && <Text style={styles.exceededText}>초과되었습니다!</Text>}
-
-        <Text style={styles.algorithmLabel}>현재 내 Shorts 알고리즘</Text>
       </View>
     </View>
   );
@@ -156,56 +164,63 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
-    height: 257,
-    backgroundColor: '#3D772D',
+    height: 240,
+    backgroundColor: '#3F792E',
   },
   safeHeader: {
     flex: 1,
   },
   topBar: {
-    height: 88,
+    height: 80,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 23,
+    paddingHorizontal: 18,
   },
   iconButton: {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoutText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     lineHeight: 22,
   },
   content: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 57,
+    paddingHorizontal: 13,
+    paddingTop: 55,
   },
-  avatar: {
+  avatarFrame: {
     position: 'absolute',
-    top: -124,
-    width: 165,
-    height: 165,
-    borderRadius: 82.5,
+    top: -116,
+    width: 156,
+    height: 156,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 78,
     borderWidth: 4,
     borderColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 15 },
     shadowOpacity: 0.14,
     shadowRadius: 22,
     elevation: 10,
+  },
+  avatar: {
+    width: 146,
+    height: 146,
+    borderRadius: 73,
     resizeMode: 'cover',
   },
   nickname: {
-    marginTop: 1,
     color: '#050505',
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '900',
     lineHeight: 39,
   },
@@ -214,57 +229,59 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginTop: 17,
     marginBottom: 12,
-    backgroundColor: '#9D9D9D',
+    backgroundColor: '#A7A7A7',
   },
   timeSection: {
     width: '100%',
     alignItems: 'center',
-    marginTop: 0,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   label: {
-    color: '#666666',
+    color: '#707070',
     fontSize: 16,
     fontWeight: '700',
     lineHeight: 21,
-    marginBottom: 15,
+    marginBottom: 10,
   },
   timerCard: {
     width: '100%',
-    height: 52,
-    flexDirection: 'row',
+    minHeight: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
     borderWidth: 1,
-    borderColor: '#E6E6E6',
+    borderColor: '#E7E7E7',
     borderRadius: 7,
     backgroundColor: '#FAFAFA',
   },
+  timerCardWithFooter: {
+    minHeight: 70,
+    paddingTop: 7,
+    paddingBottom: 6,
+  },
+  timerRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    columnGap: 10,
+  },
   timeNumber: {
     color: '#BA4449',
-    fontSize: 31,
+    fontSize: 30,
     fontWeight: '800',
     lineHeight: 37,
   },
   timeUnit: {
     color: '#000000',
-    fontSize: 31,
+    fontSize: 30,
     fontWeight: '900',
     lineHeight: 37,
   },
-  exceededText: {
-    color: '#BA4449',
-    fontSize: 15,
+  cardFooter: {
+    color: '#707070',
+    fontSize: 14,
     fontWeight: '700',
-    marginTop: 4,
-    marginBottom: 6,
-  },
-  algorithmLabel: {
-    color: '#666666',
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 21,
-    marginTop: 1,
+    lineHeight: 18,
+    marginTop: -1,
   },
 });
