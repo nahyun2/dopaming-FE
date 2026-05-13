@@ -67,6 +67,7 @@ export default function RootLayout() {
         <Stack.Screen name="signup-complete" />
         <Stack.Screen name="shorts-time-setting" />
         <Stack.Screen name="difficulty-setting" />
+        <Stack.Screen name="quiz" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="profile" />

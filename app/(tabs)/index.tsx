@@ -61,14 +61,32 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
+      let quizTimer: ReturnType<typeof setTimeout> | undefined;
 
       const loadShortformSummary = async () => {
         try {
-          const settings = await settingsService.getSettings();
+          let settings = await settingsService.getSettings();
+          if (
+            settings.difficultySettings.difficulty !== '끄기' &&
+            settings.quizNextPromptAtMs === null
+          ) {
+            settings = await settingsService.scheduleNextQuizPrompt();
+          }
+
           if (isActive) {
             setNickname(settings.nickname);
             if (settings.hasSavedShortformLimit) {
               setDailyLimitSeconds(settings.shortformLimitSeconds);
+            }
+
+            if (
+              settings.difficultySettings.difficulty !== '끄기' &&
+              settings.quizNextPromptAtMs !== null
+            ) {
+              const remainingMs = Math.max(0, settings.quizNextPromptAtMs - Date.now());
+              quizTimer = setTimeout(() => {
+                router.push('/quiz');
+              }, remainingMs);
             }
           }
 
@@ -94,6 +112,9 @@ export default function HomeScreen() {
 
       return () => {
         isActive = false;
+        if (quizTimer) {
+          clearTimeout(quizTimer);
+        }
       };
     }, [])
   );
@@ -165,6 +186,11 @@ export default function HomeScreen() {
           seconds={remaining.seconds}
           footer={isExceeded ? '초과되었습니다!' : undefined}
         />
+        {isExceeded ? (
+          <Pressable onPress={() => router.push('/quiz')} style={styles.quizButton}>
+            <Text style={styles.quizButtonText}>문제 풀고 5분 연장하기</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -295,5 +321,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
     marginTop: -1,
+  },
+  quizButton: {
+    width: '100%',
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: '#3D772D',
+    marginTop: 4,
+  },
+  quizButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

@@ -14,6 +14,7 @@ export interface UserSettings {
   shortformLimitSeconds: number;
   hasSavedShortformLimit: boolean;
   difficultySettings: DifficultySettings;
+  quizNextPromptAtMs: number | null;
 }
 
 const STORAGE_KEY = 'liontest:user-settings';
@@ -28,6 +29,7 @@ const defaultSettings: UserSettings = {
     frequencyMinutes: 5,
     isCustomFrequency: false,
   },
+  quizNextPromptAtMs: null,
 };
 
 let memorySettings: UserSettings = {
@@ -54,6 +56,15 @@ async function readNativeSettings() {
 
 function normalizeSettings(settings?: Partial<UserSettings> | null): UserSettings {
   const difficultySettings = settings?.difficultySettings;
+  const frequencyMinutes = Math.max(
+    1,
+    Number(difficultySettings?.frequencyMinutes) ||
+      defaultSettings.difficultySettings.frequencyMinutes
+  );
+  const quizNextPromptAtMs =
+    settings?.quizNextPromptAtMs === undefined
+      ? defaultSettings.quizNextPromptAtMs
+      : settings.quizNextPromptAtMs;
 
   return {
     nickname: settings?.nickname?.trim() || tokenStore.getNickname() || defaultSettings.nickname,
@@ -65,15 +76,15 @@ function normalizeSettings(settings?: Partial<UserSettings> | null): UserSetting
       settings?.hasSavedShortformLimit ?? defaultSettings.hasSavedShortformLimit,
     difficultySettings: {
       difficulty: difficultySettings?.difficulty ?? defaultSettings.difficultySettings.difficulty,
-      frequencyMinutes: Math.max(
-        1,
-        Number(difficultySettings?.frequencyMinutes) ||
-          defaultSettings.difficultySettings.frequencyMinutes
-      ),
+      frequencyMinutes,
       isCustomFrequency:
         difficultySettings?.isCustomFrequency ??
         defaultSettings.difficultySettings.isCustomFrequency,
     },
+    quizNextPromptAtMs:
+      typeof quizNextPromptAtMs === 'number' && Number.isFinite(quizNextPromptAtMs)
+        ? quizNextPromptAtMs
+        : null,
   };
 }
 
@@ -86,6 +97,10 @@ async function persist(settings: UserSettings) {
   if (FileSystem.documentDirectory) {
     await FileSystem.writeAsStringAsync(SETTINGS_FILE, serializedSettings);
   }
+}
+
+function getNextQuizPromptAt(settings: UserSettings, fromMs = Date.now()) {
+  return fromMs + settings.difficultySettings.frequencyMinutes * 60 * 1000;
 }
 
 export const settingsService = {
@@ -119,7 +134,14 @@ export const settingsService = {
     difficultySettings: DifficultySettings
   ): Promise<UserSettings> {
     const current = await this.getSettings();
-    const next = normalizeSettings({ ...current, difficultySettings });
+    const next = normalizeSettings({
+      ...current,
+      difficultySettings,
+      quizNextPromptAtMs:
+        difficultySettings.difficulty === '끄기'
+          ? null
+          : Date.now() + difficultySettings.frequencyMinutes * 60 * 1000,
+    });
 
     await persist(next);
 
@@ -132,6 +154,21 @@ export const settingsService = {
       ...current,
       shortformLimitSeconds,
       hasSavedShortformLimit: true,
+    });
+
+    await persist(next);
+
+    return next;
+  },
+
+  async scheduleNextQuizPrompt(fromMs = Date.now()): Promise<UserSettings> {
+    const current = await this.getSettings();
+    const next = normalizeSettings({
+      ...current,
+      quizNextPromptAtMs:
+        current.difficultySettings.difficulty === '끄기'
+          ? null
+          : getNextQuizPromptAt(current, fromMs),
     });
 
     await persist(next);
