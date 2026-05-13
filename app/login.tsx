@@ -23,14 +23,16 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!userId.trim() || !password.trim()) {
-      Alert.alert('알림', '아이디와 비밀번호는 필수 입력 항목입니다.');
+    const trimmedUserId = userId.trim();
+
+    if (!trimmedUserId || !password.trim()) {
+      Alert.alert('알림', '아이디와 비밀번호를 모두 입력해주세요.');
       return;
     }
 
     setIsLoading(true);
     try {
-      await authService.login({ loginId: userId, password });
+      await authService.login({ loginId: trimmedUserId, password });
       router.replace('/(tabs)');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '오류가 발생했습니다.';

@@ -79,7 +79,9 @@ export default function HomeScreen() {
 
           if (isActive) {
             setTodayUsageSeconds(usage.todayUsageSeconds);
-            setDailyLimitSeconds(usage.dailyLimitSeconds ?? limit.dailyLimitSeconds);
+            if (!settings.hasSavedShortformLimit) {
+              setDailyLimitSeconds(usage.dailyLimitSeconds ?? limit.dailyLimitSeconds);
+            }
           }
         } catch (error) {
           if (isActive) {

@@ -5,7 +5,6 @@ const API_BASE_URL = (
   process.env.EXPO_PUBLIC_API_URL ?? 'http://13.209.66.83:8082'
 ).replace(/\/$/, '');
 
-// ── 요청/응답 타입 (백엔드 DTO와 일치) ──────────────────────────────
 export interface LoginRequest {
   loginId: string;
   password: string;
@@ -24,14 +23,30 @@ export interface AuthTokens {
   nickname?: string;
 }
 
-// 백엔드 공통 응답: { status, message, data }
 interface ApiResponse<T> {
   status: string;
   message: string;
   data: T;
 }
 
-// ── 토큰 재발급 (인터셉터 내부용, request()를 거치지 않음) ───────────
+function parseApiResponse<T>(text: string): ApiResponse<T> | undefined {
+  if (!text) return undefined;
+
+  try {
+    return JSON.parse(text) as ApiResponse<T>;
+  } catch {
+    return undefined;
+  }
+}
+
+function getFallbackErrorMessage(status: number): string {
+  if (status === 401 || status === 403) {
+    return '아이디 또는 비밀번호를 확인해주세요.';
+  }
+
+  return `HTTP ${status}`;
+}
+
 async function refreshTokens(): Promise<void> {
   const refreshToken = tokenStore.getRefresh();
   if (!refreshToken) throw new Error('리프레시 토큰이 없습니다.');
@@ -43,20 +58,22 @@ async function refreshTokens(): Promise<void> {
   });
 
   const text = await response.text();
-  const json: ApiResponse<AuthTokens> = text ? JSON.parse(text) : undefined;
+  const json = parseApiResponse<AuthTokens>(text);
 
   if (!response.ok) {
-    // 400 REFRESH_TOKEN_REQUIRED / 401 REFRESH_TOKEN_EXPIRED
     tokenStore.clear();
     router.replace('/login');
     throw new Error(json?.message ?? '인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+  }
+
+  if (!json?.data) {
+    throw new Error('토큰 응답을 확인할 수 없습니다.');
   }
 
   const tokens = json.data;
   tokenStore.set(tokens.accessToken, tokens.refreshToken, tokens.nickname);
 }
 
-// ── 공통 fetch 헬퍼 ────────────────────────────────────────────────
 export async function request<T>(
   path: string,
   options?: RequestInit,
@@ -68,8 +85,8 @@ export async function request<T>(
   };
 
   const accessToken = tokenStore.getAccess();
-  if (accessToken && !headers['Authorization']) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
+  if (accessToken && !headers.Authorization) {
+    headers.Authorization = `Bearer ${accessToken}`;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -77,28 +94,26 @@ export async function request<T>(
     headers,
   });
 
-  // 액세스 토큰 만료 → 재발급 후 한 번만 재시도
   if (response.status === 401 && !isRetry && tokenStore.getRefresh()) {
     await refreshTokens();
     return request<T>(path, options, true);
   }
 
   const text = await response.text();
-  const json: ApiResponse<T> = text ? JSON.parse(text) : undefined;
+  const json = parseApiResponse<T>(text);
 
   if (!response.ok) {
-    throw new Error(json?.message ?? `HTTP ${response.status}`);
+    throw new Error(json?.message ?? getFallbackErrorMessage(response.status));
   }
 
   return json?.data ?? (json as unknown as T);
 }
 
-// ── Auth API ───────────────────────────────────────────────────────
 export const authService = {
   async login(data: LoginRequest): Promise<AuthTokens> {
     const tokens = await request<AuthTokens>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, loginId: data.loginId.trim() }),
     });
     tokenStore.set(tokens.accessToken, tokens.refreshToken, tokens.nickname);
     return tokens;
@@ -107,18 +122,17 @@ export const authService = {
   async signup(data: SignupRequest): Promise<void> {
     await request<unknown>('/api/auth/signup', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, loginId: data.loginId.trim() }),
     });
   },
 
   async checkId(loginId: string): Promise<{ isAvailable: boolean; message: string }> {
     try {
       await request<{ isAvailable: boolean }>(
-        `/api/auth/check-id?loginId=${encodeURIComponent(loginId)}`
+        `/api/auth/check-id?loginId=${encodeURIComponent(loginId.trim())}`
       );
       return { isAvailable: true, message: '사용 가능한 아이디입니다.' };
     } catch (e) {
-      // 400 INVALID_ID_FORMAT / 409 DUPLICATE_ID
       const message = e instanceof Error ? e.message : '확인에 실패했습니다.';
       return { isAvailable: false, message };
     }
@@ -129,6 +143,5 @@ export const authService = {
     tokenStore.clear();
   },
 
-  // 수동 재발급이 필요한 경우 외부에서 직접 호출 가능
   refresh: refreshTokens,
 };

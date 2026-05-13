@@ -18,6 +18,27 @@ import { shortformService } from '@/services/shortform';
 const PRIMARY_GREEN = '#3D6836';
 const TIME_RED = '#8B1A1A';
 
+function splitSeconds(totalSeconds: number) {
+  const safeSeconds = Math.max(0, totalSeconds);
+
+  return {
+    hours: Math.floor(safeSeconds / 3600),
+    minutes: Math.floor((safeSeconds % 3600) / 60),
+    seconds: safeSeconds % 60,
+  };
+}
+
+function formatTimePart(value: number) {
+  return String(value).padStart(2, '0');
+}
+
+function parseTimePart(value: string, max: number) {
+  const num = Number(value || 0);
+  if (!Number.isFinite(num)) return 0;
+
+  return Math.min(Math.max(0, num), max);
+}
+
 export default function ShortsTimeSettingScreen() {
   const [hours, setHours] = useState('03');
   const [minutes, setMinutes] = useState('00');
@@ -29,19 +50,28 @@ export default function ShortsTimeSettingScreen() {
     let isActive = true;
 
     const loadLimit = async () => {
+      const applyLimit = (limitSeconds: number) => {
+        const next = splitSeconds(limitSeconds);
+
+        setHours(formatTimePart(next.hours));
+        setMinutes(formatTimePart(next.minutes));
+        setSeconds(formatTimePart(next.seconds));
+      };
+
       try {
+        const savedSettings = await settingsService.getSettings();
+        if (isActive && savedSettings.hasSavedShortformLimit) {
+          applyLimit(savedSettings.shortformLimitSeconds);
+          return;
+        }
+
         const limit = await shortformService.getLimit();
         const safeSeconds = Math.max(0, limit.dailyLimitSeconds);
-        const nextHours = Math.floor(safeSeconds / 3600);
-        const nextMinutes = Math.floor((safeSeconds % 3600) / 60);
-        const nextSeconds = safeSeconds % 60;
 
         await settingsService.updateShortformLimit(safeSeconds);
 
         if (isActive) {
-          setHours(String(nextHours).padStart(2, '0'));
-          setMinutes(String(nextMinutes).padStart(2, '0'));
-          setSeconds(String(nextSeconds).padStart(2, '0'));
+          applyLimit(safeSeconds);
         }
       } catch (error) {
         if (isActive) {
@@ -60,20 +90,33 @@ export default function ShortsTimeSettingScreen() {
   const handleSave = async () => {
     if (isSaving) return;
 
+    const safeHours = parseTimePart(hours, 23);
+    const safeMinutes = parseTimePart(minutes, 59);
+    const safeSeconds = parseTimePart(seconds, 59);
     const dailyLimitSeconds =
-      Number(hours || 0) * 3600 + Number(minutes || 0) * 60 + Number(seconds || 0);
+      safeHours * 3600 + safeMinutes * 60 + safeSeconds;
 
     try {
       setIsSaving(true);
-      const result = await shortformService.updateLimit({ dailyLimitSeconds });
-      await settingsService.updateShortformLimit(result.dailyLimitSeconds);
+      setHours(formatTimePart(safeHours));
+      setMinutes(formatTimePart(safeMinutes));
+      setSeconds(formatTimePart(safeSeconds));
+      await settingsService.updateShortformLimit(dailyLimitSeconds);
+
+      try {
+        const result = await shortformService.updateLimit({ dailyLimitSeconds });
+        await settingsService.updateShortformLimit(result.dailyLimitSeconds);
+      } catch (error) {
+        console.warn('Failed to sync shortform limit with server:', error);
+      }
+
       setShowModal(true);
     } catch (error) {
       Alert.alert(
         '저장 실패',
         error instanceof Error
-          ? `서버에 제한 시간을 저장하지 못했습니다.\n${error.message}`
-          : '서버에 제한 시간을 저장하지 못했습니다.'
+          ? `제한 시간을 저장하지 못했습니다.\n${error.message}`
+          : '제한 시간을 저장하지 못했습니다.'
       );
     } finally {
       setIsSaving(false);

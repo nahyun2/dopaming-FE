@@ -57,10 +57,10 @@ function normalizeSettings(settings?: Partial<UserSettings> | null): UserSetting
 
   return {
     nickname: settings?.nickname?.trim() || tokenStore.getNickname() || defaultSettings.nickname,
-    shortformLimitSeconds: Math.max(
-      0,
-      Number(settings?.shortformLimitSeconds) || defaultSettings.shortformLimitSeconds
-    ),
+    shortformLimitSeconds:
+      settings?.shortformLimitSeconds === undefined
+        ? defaultSettings.shortformLimitSeconds
+        : Math.max(0, Number(settings.shortformLimitSeconds) || 0),
     hasSavedShortformLimit:
       settings?.hasSavedShortformLimit ?? defaultSettings.hasSavedShortformLimit,
     difficultySettings: {
