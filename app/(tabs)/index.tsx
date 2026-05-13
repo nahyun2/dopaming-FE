@@ -67,6 +67,9 @@ export default function HomeScreen() {
           const settings = await settingsService.getSettings();
           if (isActive) {
             setNickname(settings.nickname);
+            if (settings.hasSavedShortformLimit) {
+              setDailyLimitSeconds(settings.shortformLimitSeconds);
+            }
           }
 
           const [usage, limit] = await Promise.all([
@@ -76,7 +79,7 @@ export default function HomeScreen() {
 
           if (isActive) {
             setTodayUsageSeconds(usage.todayUsageSeconds);
-            setDailyLimitSeconds(limit.dailyLimitSeconds);
+            setDailyLimitSeconds(usage.dailyLimitSeconds ?? limit.dailyLimitSeconds);
           }
         } catch (error) {
           if (isActive) {

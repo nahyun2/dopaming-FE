@@ -11,6 +11,8 @@ export interface DifficultySettings {
 
 export interface UserSettings {
   nickname: string;
+  shortformLimitSeconds: number;
+  hasSavedShortformLimit: boolean;
   difficultySettings: DifficultySettings;
 }
 
@@ -19,6 +21,8 @@ const SETTINGS_FILE = `${FileSystem.documentDirectory ?? ''}liontest-user-settin
 
 const defaultSettings: UserSettings = {
   nickname: '닉네임',
+  shortformLimitSeconds: 3 * 60 * 60,
+  hasSavedShortformLimit: false,
   difficultySettings: {
     difficulty: '보통',
     frequencyMinutes: 5,
@@ -53,6 +57,12 @@ function normalizeSettings(settings?: Partial<UserSettings> | null): UserSetting
 
   return {
     nickname: settings?.nickname?.trim() || tokenStore.getNickname() || defaultSettings.nickname,
+    shortformLimitSeconds: Math.max(
+      0,
+      Number(settings?.shortformLimitSeconds) || defaultSettings.shortformLimitSeconds
+    ),
+    hasSavedShortformLimit:
+      settings?.hasSavedShortformLimit ?? defaultSettings.hasSavedShortformLimit,
     difficultySettings: {
       difficulty: difficultySettings?.difficulty ?? defaultSettings.difficultySettings.difficulty,
       frequencyMinutes: Math.max(
@@ -110,6 +120,19 @@ export const settingsService = {
   ): Promise<UserSettings> {
     const current = await this.getSettings();
     const next = normalizeSettings({ ...current, difficultySettings });
+
+    await persist(next);
+
+    return next;
+  },
+
+  async updateShortformLimit(shortformLimitSeconds: number): Promise<UserSettings> {
+    const current = await this.getSettings();
+    const next = normalizeSettings({
+      ...current,
+      shortformLimitSeconds,
+      hasSavedShortformLimit: true,
+    });
 
     await persist(next);
 

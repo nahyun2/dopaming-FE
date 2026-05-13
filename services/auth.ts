@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { tokenStore } from './token';
 
 const API_BASE_URL = (
-  process.env.EXPO_PUBLIC_API_URL ?? 'https://proponent-ocean-worried.ngrok-free.dev'
+  process.env.EXPO_PUBLIC_API_URL ?? 'http://13.209.66.83:8082'
 ).replace(/\/$/, '');
 
 // ── 요청/응답 타입 (백엔드 DTO와 일치) ──────────────────────────────

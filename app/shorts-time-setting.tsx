@@ -12,6 +12,7 @@ import {
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { settingsService } from '@/services/settings';
 import { shortformService } from '@/services/shortform';
 
 const PRIMARY_GREEN = '#3D6836';
@@ -34,6 +35,8 @@ export default function ShortsTimeSettingScreen() {
         const nextHours = Math.floor(safeSeconds / 3600);
         const nextMinutes = Math.floor((safeSeconds % 3600) / 60);
         const nextSeconds = safeSeconds % 60;
+
+        await settingsService.updateShortformLimit(safeSeconds);
 
         if (isActive) {
           setHours(String(nextHours).padStart(2, '0'));
@@ -62,12 +65,15 @@ export default function ShortsTimeSettingScreen() {
 
     try {
       setIsSaving(true);
-      await shortformService.updateLimit({ dailyLimitSeconds });
+      const result = await shortformService.updateLimit({ dailyLimitSeconds });
+      await settingsService.updateShortformLimit(result.dailyLimitSeconds);
       setShowModal(true);
     } catch (error) {
       Alert.alert(
         '저장 실패',
-        error instanceof Error ? error.message : '하루 숏폼 제한 시간 변경에 실패했습니다.'
+        error instanceof Error
+          ? `서버에 제한 시간을 저장하지 못했습니다.\n${error.message}`
+          : '서버에 제한 시간을 저장하지 못했습니다.'
       );
     } finally {
       setIsSaving(false);
