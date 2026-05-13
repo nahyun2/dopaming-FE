@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProblemDifficulty, settingsService } from '@/services/settings';
 
@@ -35,6 +35,7 @@ export default function DifficultySettingScreen() {
   const [difficulty, setDifficulty] = useState<ProblemDifficulty>('보통');
   const [frequency, setFrequency] = useState('5분');
   const [customMinutes, setCustomMinutes] = useState('5');
+  const [showModal, setShowModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -82,10 +83,15 @@ export default function DifficultySettingScreen() {
         frequencyMinutes: Math.floor(minutes),
         isCustomFrequency: frequency === CUSTOM_FREQUENCY,
       });
-      Alert.alert('저장되었습니다', '문제 난이도 설정이 저장되었습니다.');
+      setShowModal(true);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleGoToMain = () => {
+    setShowModal(false);
+    router.replace('/(tabs)');
   };
 
   return (
@@ -146,6 +152,26 @@ export default function DifficultySettingScreen() {
         </Pressable>
         <View style={styles.divider} />
       </View>
+
+      <Modal visible={showModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>저장되었습니다!</Text>
+            <Text style={styles.modalDesc}>
+              변경된 설정이 저장되었습니다!{'\n'}
+              도파민 중독에서 벗어나는 그날까지 도파밍!
+            </Text>
+            <Image
+              source={require('@/assets/images/mascot_great.png')}
+              style={styles.modalMascot}
+              resizeMode="contain"
+            />
+            <Pressable onPress={handleGoToMain} style={styles.mainButton}>
+              <Text style={styles.mainButtonText}>메인으로</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -266,5 +292,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 19,
+  },
+  modalOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  modalCard: {
+    width: '100%',
+    alignItems: 'center',
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 28,
+    paddingTop: 36,
+    paddingBottom: 28,
+  },
+  modalTitle: {
+    color: '#1A1A1A',
+    fontSize: 26,
+    fontWeight: '800',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalDesc: {
+    color: '#666666',
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  modalMascot: {
+    width: 160,
+    height: 160,
+    marginBottom: 24,
+  },
+  mainButton: {
+    width: '100%',
+    alignItems: 'center',
+    borderRadius: 50,
+    backgroundColor: '#3D6836',
+    paddingVertical: 18,
+  },
+  mainButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
   },
 });

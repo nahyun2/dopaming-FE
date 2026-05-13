@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +21,45 @@ import { settingsService } from '@/services/settings';
 const PRIMARY_GREEN = '#3D772D';
 
 type ResultState = 'correct' | 'wrong' | null;
+
+function getLocalArithmeticAnswer(question: string): number | null {
+  const normalizedQuestion = question
+    .replace(/더하기/g, '+')
+    .replace(/빼기/g, '-')
+    .replace(/곱하기/g, '*')
+    .replace(/나누기/g, '/')
+    .replace(/[×xX]/g, '*')
+    .replace(/[÷]/g, '/');
+  const match = normalizedQuestion.match(/(-?\d+(?:\.\d+)?)\s*([+\-*/])\s*(-?\d+(?:\.\d+)?)/);
+
+  if (!match) return null;
+
+  const left = Number(match[1]);
+  const operator = match[2];
+  const right = Number(match[3]);
+
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
+
+  switch (operator) {
+    case '+':
+      return left + right;
+    case '-':
+      return left - right;
+    case '*':
+      return left * right;
+    case '/':
+      return right === 0 ? null : left / right;
+    default:
+      return null;
+  }
+}
+
+function isLocallyCorrect(question: string, submittedAnswer: number): boolean {
+  const localAnswer = getLocalArithmeticAnswer(question);
+  if (localAnswer === null) return false;
+
+  return Math.abs(localAnswer - submittedAnswer) < 0.000001;
+}
 
 export default function QuizScreen() {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
@@ -71,11 +111,14 @@ export default function QuizScreen() {
         answer: parsedAnswer,
       });
 
-      if (result.isCorrect) {
+      const isCorrect = result.isCorrect || isLocallyCorrect(quiz.question, parsedAnswer);
+
+      if (isCorrect) {
         const currentSettings = await settingsService.getSettings();
+        const fallbackExtendedSeconds = promptMinutes * 60;
         const nextLimitSeconds =
           result.newTotalLimitSeconds ??
-          currentSettings.shortformLimitSeconds + result.extendedSeconds;
+          currentSettings.shortformLimitSeconds + (result.extendedSeconds || fallbackExtendedSeconds);
 
         await settingsService.updateShortformLimit(nextLimitSeconds);
         await settingsService.scheduleNextQuizPrompt();
@@ -93,13 +136,19 @@ export default function QuizScreen() {
     }
   };
 
-  const handleRetry = async () => {
+  const handleRetry = () => {
     setResultState(null);
-    await loadQuiz();
+    setAnswer('');
   };
 
-  const closeModal = () => {
+  const closeQuizModal = () => {
     setResultState(null);
+
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
   };
 
   return (
@@ -157,14 +206,19 @@ export default function QuizScreen() {
         </Pressable>
       </KeyboardAvoidingView>
 
-      <Modal visible={resultState !== null} transparent animationType="fade">
+      <Modal
+        visible={resultState !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={resultState === 'correct' ? closeQuizModal : handleRetry}
+      >
         <View style={styles.modalOverlay}>
           {resultState === 'wrong' ? (
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>정답이 아닙니다!</Text>
               <Text style={styles.modalDesc}>
                 계속하시려면 정답을 맞춰야 해요!{'\n'}
-                이번에 오늘을 여기까지...?
+                이참에 오늘은 여기까지...?
               </Text>
               <Image
                 source={require('@/assets/images/mascot_stop.png')}
@@ -187,7 +241,7 @@ export default function QuizScreen() {
                 style={styles.modalMascot}
                 resizeMode="contain"
               />
-              <Pressable onPress={closeModal} style={styles.closeModalButton}>
+              <Pressable onPress={closeQuizModal} style={styles.closeModalButton}>
                 <Text style={styles.modalButtonText}>창 끄기</Text>
               </Pressable>
             </View>

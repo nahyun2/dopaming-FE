@@ -175,4 +175,21 @@ export const settingsService = {
 
     return next;
   },
+
+  async clearSettings(): Promise<void> {
+    memorySettings = normalizeSettings(defaultSettings);
+    getWebStorage()?.removeItem(STORAGE_KEY);
+
+    if (FileSystem.documentDirectory) {
+      try {
+        const info = await FileSystem.getInfoAsync(SETTINGS_FILE);
+
+        if (info.exists) {
+          await FileSystem.deleteAsync(SETTINGS_FILE);
+        }
+      } catch {
+        // Settings cleanup should not block account deletion navigation.
+      }
+    }
+  },
 };

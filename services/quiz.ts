@@ -21,6 +21,29 @@ export interface QuizSubmitResult {
   message: string;
 }
 
+type RawQuizSubmitResult = Partial<QuizSubmitResult> & {
+  correct?: boolean;
+  is_correct?: boolean;
+  result?: boolean;
+  success?: boolean;
+};
+
+function normalizeSubmitResult(result: RawQuizSubmitResult): QuizSubmitResult {
+  return {
+    isCorrect:
+      result.isCorrect ??
+      result.correct ??
+      result.is_correct ??
+      result.result ??
+      result.success ??
+      false,
+    extendedSeconds: result.extendedSeconds ?? 0,
+    newTotalLimitSeconds: result.newTotalLimitSeconds,
+    remainingDailyQuizzes: result.remainingDailyQuizzes,
+    message: result.message ?? '',
+  };
+}
+
 export const quizService = {
   generate(): Promise<Quiz> {
     return request<Quiz>('/api/quiz/generate', {
@@ -28,10 +51,11 @@ export const quizService = {
     });
   },
 
-  submit(data: QuizSubmitRequest): Promise<QuizSubmitResult> {
-    return request<QuizSubmitResult>('/api/quiz/submit', {
+  async submit(data: QuizSubmitRequest): Promise<QuizSubmitResult> {
+    const result = await request<RawQuizSubmitResult>('/api/quiz/submit', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    return normalizeSubmitResult(result);
   },
 };

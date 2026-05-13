@@ -29,6 +29,8 @@ interface ApiResponse<T> {
   data: T;
 }
 
+type AccountDeleteResult = 'deleted' | 'signedOutOnly';
+
 function parseApiResponse<T>(text: string): ApiResponse<T> | undefined {
   if (!text) return undefined;
 
@@ -141,6 +143,43 @@ export const authService = {
   async logout(): Promise<void> {
     await request<void>('/api/auth/logout', { method: 'POST' });
     tokenStore.clear();
+  },
+
+  async deleteAccount(): Promise<AccountDeleteResult> {
+    const deletePaths = [
+      '/api/auth/delete',
+      '/api/auth/withdraw',
+      '/api/auth/me',
+      '/api/users/me',
+      '/api/user/me',
+      '/api/members/me',
+      '/api/member/me',
+    ];
+    for (const path of deletePaths) {
+      try {
+        await request<void>(path, { method: 'DELETE' });
+        tokenStore.clear();
+        return 'deleted';
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '';
+
+        if (
+          !message.startsWith('HTTP 404') &&
+          !message.startsWith('HTTP 405') &&
+          message !== '아이디 또는 비밀번호를 확인해주세요.'
+        ) {
+          throw error;
+        }
+      }
+    }
+
+    try {
+      await this.logout();
+    } catch {
+      tokenStore.clear();
+    }
+
+    return 'signedOutOnly';
   },
 
   refresh: refreshTokens,

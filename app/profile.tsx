@@ -4,12 +4,15 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Alert, Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { authService } from '@/services/auth';
 import { settingsService } from '@/services/settings';
 
 export default function ProfileScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [nickname, setNickname] = useState('닉네임');
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -41,9 +44,33 @@ export default function ProfileScreen() {
       setIsSaving(true);
       const settings = await settingsService.updateNickname(nextNickname);
       setNickname(settings.nickname);
-      Alert.alert('저장되었습니다', '프로필 이름이 저장되었습니다.');
+      setSaveModalVisible(true);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleGoToMain = () => {
+    setSaveModalVisible(false);
+    router.replace('/(tabs)');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (isDeleting) return;
+
+    try {
+      setIsDeleting(true);
+      await authService.deleteAccount();
+      await settingsService.clearSettings();
+      setDeleteModalVisible(false);
+      router.replace('/login');
+    } catch (error) {
+      Alert.alert(
+        '계정삭제 실패',
+        error instanceof Error ? error.message : '계정을 삭제하지 못했습니다.'
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -92,6 +119,26 @@ export default function ProfileScreen() {
         <Text style={styles.deleteText}>계정삭제</Text>
       </Pressable>
 
+      <Modal animationType="fade" transparent visible={saveModalVisible}>
+        <View style={styles.saveModalOverlay}>
+          <View style={styles.saveModalCard}>
+            <Text style={styles.saveModalTitle}>저장되었습니다!</Text>
+            <Text style={styles.saveModalDesc}>
+              변경된 설정이 저장되었습니다!{'\n'}
+              도파민 중독에서 벗어나는 그날까지 도파밍!
+            </Text>
+            <Image
+              source={require('@/assets/images/mascot_great.png')}
+              style={styles.saveModalMascot}
+              resizeMode="contain"
+            />
+            <Pressable onPress={handleGoToMain} style={styles.mainButton}>
+              <Text style={styles.mainButtonText}>메인으로</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <Modal animationType="fade" transparent visible={deleteModalVisible}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -114,9 +161,10 @@ export default function ProfileScreen() {
                 <Text style={styles.cancelText}>뒤로가기</Text>
               </Pressable>
               <Pressable
-                onPress={() => setDeleteModalVisible(false)}
+                disabled={isDeleting}
+                onPress={handleDeleteAccount}
                 style={[styles.modalButton, styles.confirmButton]}>
-                <Text style={styles.confirmText}>삭제하기</Text>
+                <Text style={styles.confirmText}>{isDeleting ? '삭제 중...' : '삭제하기'}</Text>
               </Pressable>
             </View>
           </View>
@@ -241,6 +289,53 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 19,
+  },
+  saveModalOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  saveModalCard: {
+    width: '100%',
+    alignItems: 'center',
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 28,
+    paddingTop: 36,
+    paddingBottom: 28,
+  },
+  saveModalTitle: {
+    color: '#1A1A1A',
+    fontSize: 26,
+    fontWeight: '800',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  saveModalDesc: {
+    color: '#666666',
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  saveModalMascot: {
+    width: 160,
+    height: 160,
+    marginBottom: 24,
+  },
+  mainButton: {
+    width: '100%',
+    alignItems: 'center',
+    borderRadius: 50,
+    backgroundColor: '#3D6836',
+    paddingVertical: 18,
+  },
+  mainButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
