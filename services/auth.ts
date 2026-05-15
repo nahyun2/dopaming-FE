@@ -1,9 +1,8 @@
 import { router } from 'expo-router';
 import { tokenStore } from './token';
 
-const API_BASE_URL = (
-  process.env.EXPO_PUBLIC_API_URL ?? 'http://13.209.66.83:8082'
-).replace(/\/$/, '');
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
+if (!API_BASE_URL) throw new Error('API URL이 설정되지 않았습니다!');
 
 export interface LoginRequest {
   loginId: string;
